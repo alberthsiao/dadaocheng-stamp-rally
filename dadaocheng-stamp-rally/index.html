@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>璀璨煙火・時光拼圖｜大稻埕永樂町逛街地圖</title>
+<meta name="description" content="永樂町商圈「璀璨煙火・時光拼圖」70 家店集章活動的逛街助手：依顏色與街道找店、規劃路線、記錄集章進度與彩虹任務。">
+<meta name="theme-color" content="#101736">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="永樂逛街">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<a class="skip-link" href="#board">跳到店家列表</a>
+
+<header class="hero">
+  <div class="hero__glow" aria-hidden="true"></div>
+  <div class="hero__inner">
+    <div class="hero__top">
+      <p class="hero__kicker" id="kicker">永樂尋蹤</p>
+      <button class="icon-btn" id="themeToggle" type="button" aria-label="切換亮／暗色">
+        <span class="icon-btn__glyph" aria-hidden="true">◐</span>
+      </button>
+    </div>
+
+    <h1 class="hero__title">璀璨煙火<span class="hero__dot">・</span>時光拼圖</h1>
+    <p class="hero__sub">大稻埕・永樂町商圈 70 家店集章逛街地圖</p>
+
+    <div class="hero__meta">
+      <span class="pill" id="dateRange">115年7月25日 – 8月14日</span>
+      <span class="pill pill--accent" id="countdown">活動進行中</span>
+    </div>
+
+    <div class="hero__links">
+      <a class="link-btn" id="linkMap" href="#" target="_blank" rel="noopener noreferrer">
+        <span class="link-btn__icon" aria-hidden="true">◎</span>
+        <span>
+          <strong>官方地圖</strong>
+          <small>70 家店位置一次看</small>
+        </span>
+      </a>
+      <a class="link-btn" id="linkVideo" href="#" target="_blank" rel="noopener noreferrer">
+        <span class="link-btn__icon" aria-hidden="true">▶</span>
+        <span>
+          <strong>活動影片</strong>
+          <small>Instagram</small>
+        </span>
+      </a>
+    </div>
+  </div>
+</header>
+
+<!-- ── 進度儀表 ───────────────────────────────────────── -->
+<section class="panel progress" aria-labelledby="progressHeading">
+  <h2 class="sr-only" id="progressHeading">集章進度</h2>
+
+  <div class="progress__stats">
+    <div class="stat">
+      <span class="stat__num" id="statStamps">0</span>
+      <span class="stat__label">已集章 / 70</span>
+    </div>
+    <div class="stat stat--hero">
+      <span class="stat__num" id="statRounds">0</span>
+      <span class="stat__label">彩虹任務完成</span>
+    </div>
+    <div class="stat">
+      <span class="stat__num" id="statGacha">0</span>
+      <span class="stat__label">可夾扭蛋次數</span>
+    </div>
+  </div>
+
+  <div class="bar" role="img" aria-label="總集章進度" id="totalBarWrap">
+    <div class="bar__fill" id="totalBar"></div>
+  </div>
+
+  <p class="progress__hint" id="nextHint">七色各集 1 家＝完成 1 次彩虹任務，最多 3 次。</p>
+
+  <ul class="rainbow" id="rainbow"></ul>
+</section>
+
+<!-- ── 工具列 ─────────────────────────────────────────── -->
+<section class="panel toolbar" aria-label="篩選與檢視">
+  <div class="search">
+    <span class="search__icon" aria-hidden="true">⌕</span>
+    <input type="search" id="search" placeholder="搜尋店名、地址或編號…" autocomplete="off" aria-label="搜尋店家">
+    <button class="search__clear" id="searchClear" type="button" aria-label="清除搜尋" hidden>×</button>
+  </div>
+
+  <div class="filters">
+    <div class="chips" id="colorChips" role="group" aria-label="顏色篩選"></div>
+
+    <div class="chips chips--status" role="group" aria-label="狀態篩選">
+      <button class="chip chip--status is-on" data-status="all" type="button">全部</button>
+      <button class="chip chip--status" data-status="todo" type="button">未集章</button>
+      <button class="chip chip--status" data-status="done" type="button">已集章</button>
+    </div>
+
+    <div class="selects">
+      <label class="select">
+        <span class="select__label">街道</span>
+        <select id="streetSelect" aria-label="街道篩選"></select>
+      </label>
+      <label class="select">
+        <span class="select__label">檢視</span>
+        <select id="viewSelect" aria-label="檢視方式">
+          <option value="color">依顏色</option>
+          <option value="route">依街道（走路順序）</option>
+          <option value="number">依編號</option>
+        </select>
+      </label>
+    </div>
+  </div>
+
+  <p class="toolbar__count" id="resultCount"></p>
+</section>
+
+<main id="board" class="board"></main>
+
+<!-- ── 活動資訊 ───────────────────────────────────────── -->
+<section class="panel info">
+  <details class="details" id="rulesDetails">
+    <summary class="details__summary">
+      <span>活動規則與扭蛋地點</span>
+      <span class="details__arrow" aria-hidden="true">▾</span>
+    </summary>
+    <div class="details__body">
+      <div class="callout">
+        <p class="callout__title">扭蛋地點</p>
+        <p><a class="callout__link" id="gachaPlace" href="#" target="_blank" rel="noopener noreferrer"></a></p>
+        <p class="callout__muted" id="gachaHours"></p>
+      </div>
+      <ol class="rules" id="rulesList"></ol>
+      <p class="info__credit">
+        主辦：<span id="organizer"></span>　指導單位：<span id="advisor"></span><br>
+        本站為非官方逛街輔助工具，活動規則以官方 DM 及主辦單位公告為準。
+      </p>
+    </div>
+  </details>
+
+  <details class="details">
+    <summary class="details__summary">
+      <span>我的紀錄（備份／還原）</span>
+      <span class="details__arrow" aria-hidden="true">▾</span>
+    </summary>
+    <div class="details__body">
+      <p class="callout__muted">集章紀錄與筆記只存在這台裝置的瀏覽器裡。換手機或清快取前記得備份。</p>
+      <div class="btn-row">
+        <button class="btn" id="exportBtn" type="button">匯出備份</button>
+        <button class="btn" id="importBtn" type="button">還原備份</button>
+        <button class="btn btn--danger" id="resetBtn" type="button">全部清除</button>
+      </div>
+      <input type="file" id="importFile" accept="application/json,.json" hidden>
+    </div>
+  </details>
+</section>
+
+<footer class="footer">
+  <p>同享太平・共榮永樂</p>
+  <p class="footer__muted">資料整理自活動 DM，僅供逛街參考。</p>
+</footer>
+
+<!-- 浮動：下一站推薦 -->
+<button class="fab" id="nextStopBtn" type="button">
+  <span class="fab__icon" aria-hidden="true">🎲</span>
+  <span class="fab__text">下一站去哪</span>
+</button>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
