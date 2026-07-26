@@ -78,6 +78,175 @@ function stats() {
   return { perColor, rounds, missing, total: state.collected.size };
 }
 
+// ── 定位與距離 ─────────────────────────────────────────────
+
+/** 使用者目前位置；null = 尚未定位 */
+let geo = null;
+
+const EARTH_R = 6371000;
+
+/** 兩點間大圓距離（公尺）。大稻埕範圍小，這個精度綽綽有餘 */
+function haversine(a, b) {
+  const rad = (d) => (d * Math.PI) / 180;
+  const dLat = rad(b.lat - a.lat);
+  const dLon = rad(b.lon - a.lon);
+  const h = Math.sin(dLat / 2) ** 2
+    + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLon / 2) ** 2;
+  return 2 * EARTH_R * Math.asin(Math.sqrt(h));
+}
+
+function fmtDist(m) {
+  return m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(1)} km`;
+}
+
+/** 以 80 公尺／分鐘（約 4.8 km/h）估步行時間 */
+function fmtWalk(m) {
+  const min = Math.max(1, Math.round(m / 80));
+  return min < 60 ? `約 ${min} 分鐘` : `約 ${Math.floor(min / 60)} 小時 ${min % 60} 分`;
+}
+
+/** 保險用逾時：規範上「等使用者回應權限提示」不計入 timeout，
+ *  某些瀏覽器在這期間兩個回呼都不會來，按鈕就會永遠卡在「定位中…」 */
+const GEO_GUARD_MS = 20000;
+
+function locate() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error('unsupported'));
+      return;
+    }
+
+    let settled = false;
+    const finish = (fn, value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(guard);
+      fn(value);
+    };
+    const guard = setTimeout(
+      () => finish(reject, { code: 0, message: 'guard timeout' }),
+      GEO_GUARD_MS,
+    );
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => finish(resolve, {
+        lat: pos.coords.latitude,
+        lon: pos.coords.longitude,
+        acc: pos.coords.accuracy,
+      }),
+      (err) => finish(reject, err),
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 },
+    );
+  });
+}
+
+function geoErrorMessage(err) {
+  if (err && err.code === 1) return '定位被拒絕，請在瀏覽器允許此網站取用位置';
+  if (err && err.code === 2) return '抓不到位置，請確認裝置的定位服務已開啟';
+  if (err && err.code === 3) return '定位逾時，請到空曠處再試一次';
+  if (err && err.code === 0) return '等不到定位授權，允許之後再按一次';
+  return '這個瀏覽器不支援定位功能';
+}
+
+// ── 路線規劃 ───────────────────────────────────────────────
+
+/**
+ * 站點集合固定，用 2-opt 反覆改善順序讓總路程最短
+ * 起點為使用者位置、終點自由（不需繞回原點）
+ */
+function orderRoute(origin, stops) {
+  const totalOf = (arr) => {
+    let d = 0;
+    let cur = origin;
+    for (const s of arr) { d += haversine(cur, s); cur = s; }
+    return d;
+  };
+
+  let best = [...stops];
+  let bestD = totalOf(best);
+  let improved = true;
+  while (improved) {
+    improved = false;
+    for (let i = 0; i < best.length - 1; i += 1) {
+      for (let j = i + 1; j < best.length; j += 1) {
+        const cand = [
+          ...best.slice(0, i),
+          ...best.slice(i, j + 1).reverse(),
+          ...best.slice(j + 1),
+        ];
+        const d = totalOf(cand);
+        if (d < bestD - 0.01) { best = cand; bestD = d; improved = true; }
+      }
+    }
+  }
+
+  const legs = [];
+  let cur = origin;
+  for (const s of best) { legs.push(haversine(cur, s)); cur = s; }
+  return { stops: best, legs, total: bestD };
+}
+
+/**
+ * 規劃最快完成下一次彩虹任務的路線
+ * 每色取幾家近的當種子各跑一次最近鄰貪婪，再各自 2-opt，取總距離最短者
+ */
+function planRoute(origin) {
+  const { perColor, rounds } = stats();
+  const remaining = SHOPS.filter((s) => !state.collected.has(s.id));
+  if (!remaining.length) return null;
+
+  // 三輪彩虹都完成了 → 改推薦最近的未集章店家，衝 70 家大獎
+  if (rounds >= MAX_ROUNDS) {
+    const stops = remaining
+      .map((s) => ({ s, d: haversine(origin, s) }))
+      .sort((a, b) => a.d - b.d)
+      .slice(0, 8)
+      .map((x) => x.s);
+    return { mode: 'sweep', round: rounds, ...orderRoute(origin, stops) };
+  }
+
+  const needColors = COLORS.filter((c) => perColor[c.key] <= rounds).map((c) => c.key);
+
+  // 每色只留離起點最近的幾家當候選，再列舉所有組合各自 2-opt。
+  // 純貪婪會被「起步最近」誤導（0 公尺那家可能讓後面繞遠路），
+  // 3^7 = 2187 組合在手機上也只要幾十毫秒，換得接近最佳的路線。
+  const CANDIDATES = 3;
+  const pools = needColors.map((key) => remaining
+    .filter((s) => s.color === key)
+    .map((s) => ({ s, d: haversine(origin, s) }))
+    .sort((a, b) => a.d - b.d)
+    .slice(0, CANDIDATES)
+    .map((x) => x.s));
+  if (pools.some((p) => !p.length)) return null;
+
+  let best = null;
+  const walk = (i, picked) => {
+    if (i === pools.length) {
+      const r = orderRoute(origin, picked);
+      if (!best || r.total < best.total) best = r;
+      return;
+    }
+    for (const s of pools[i]) walk(i + 1, [...picked, s]);
+  };
+  walk(0, []);
+
+  return best ? { mode: 'rainbow', round: rounds + 1, ...best } : null;
+}
+
+/** Google Maps 多點步行導航（中途點最多 9 個，我們最多 7 站） */
+function navUrl(origin, stops) {
+  const pt = (p) => `${p.lat},${p.lon}`;
+  const params = new URLSearchParams({
+    api: '1',
+    origin: pt(origin),
+    destination: pt(stops[stops.length - 1]),
+    travelmode: 'walking',
+  });
+  const mid = stops.slice(0, -1);
+  if (mid.length) params.set('waypoints', mid.map(pt).join('|'));
+  return `https://www.google.com/maps/dir/?${params.toString()}`;
+}
+
 // ── 篩選與分組 ─────────────────────────────────────────────
 
 function matchesQuery(shop, q) {
@@ -116,6 +285,14 @@ function filtered() {
 
 /** 依檢視模式切成 [{ key, title, meta, color, shops }] */
 function grouped(list) {
+  if (ui.view === 'near' && geo) {
+    return [{
+      key: 'near',
+      title: '',
+      shops: [...list].sort((a, b) => haversine(geo, a) - haversine(geo, b)),
+    }];
+  }
+
   if (ui.view === 'route') {
     const byStreet = new Map();
     list.forEach((s) => {
@@ -193,6 +370,13 @@ function cardEl(shop, freshId) {
     place.className = 'card__place';
     place.textContent = `（${shop.place}）`;
     card.appendChild(place);
+  }
+
+  if (geo) {
+    const dist = document.createElement('div');
+    dist.className = 'card__dist';
+    dist.textContent = `↝ ${fmtDist(haversine(geo, shop))}`;
+    card.appendChild(dist);
   }
 
   if (note) {
@@ -367,6 +551,7 @@ function toggleStamp(id) {
     state.collected.delete(id);
     save();
     render();
+    refreshPlanIfOpen();
     toast(`已取消 ${String(id).padStart(2, '0')} ${shop.name} 的章`);
     return;
   }
@@ -374,6 +559,7 @@ function toggleStamp(id) {
   state.collected.add(id);
   save();
   render(id);
+  refreshPlanIfOpen();
 
   const after = stats();
   if (after.total === SHOPS.length) {
@@ -399,14 +585,122 @@ function editNote(id) {
   render();
 }
 
-/** 依「彩虹任務最缺的顏色」推薦下一家沒去過的店 */
-function suggestNextStop() {
+// ── 路線面板 ───────────────────────────────────────────────
+
+function closePlan() {
+  document.getElementById('routePanel').hidden = true;
+}
+
+function renderPlan(plan, { scroll = true } = {}) {
+  const panel = document.getElementById('routePanel');
+  const list = document.getElementById('planList');
+
+  document.getElementById('planTitle').textContent = plan.mode === 'rainbow'
+    ? `最快完成第 ${plan.round} 次彩虹任務`
+    : '就近再收幾家，衝 70 家大獎';
+
+  document.getElementById('planSummary').innerHTML =
+    `共 <strong>${plan.stops.length}</strong> 站・步行 <strong>${fmtDist(plan.total)}</strong>・${fmtWalk(plan.total)}`;
+
+  list.replaceChildren();
+  plan.stops.forEach((shop, i) => {
+    const color = COLOR_MAP[shop.color];
+    const li = document.createElement('li');
+    li.className = 'stop';
+    li.style.setProperty('--c', color.hex);
+    li.dataset.id = String(shop.id);
+    li.tabIndex = 0;
+    li.setAttribute('role', 'button');
+    li.setAttribute('aria-label', `第 ${i + 1} 站 ${shop.name}，跳到這家店`);
+
+    const no = document.createElement('span');
+    no.className = 'stop__no';
+    no.textContent = String(i + 1);
+    li.appendChild(no);
+
+    const body = document.createElement('div');
+    body.className = 'stop__body';
+
+    const name = document.createElement('div');
+    name.className = 'stop__name';
+    name.textContent = `${color.label}${String(shop.id).padStart(2, '0')}　${shop.name}`;
+    body.appendChild(name);
+
+    const addr = document.createElement('div');
+    addr.className = 'stop__addr';
+    addr.textContent = shop.addr + (shop.place ? `（${shop.place}）` : '');
+    body.appendChild(addr);
+
+    li.appendChild(body);
+
+    const d = document.createElement('span');
+    d.className = 'stop__dist';
+    d.textContent = fmtDist(plan.legs[i]);
+    li.appendChild(d);
+
+    list.appendChild(li);
+  });
+
+  document.getElementById('planNav').href = navUrl(geo, plan.stops);
+
+  const notes = [];
+  if (geo.acc) notes.push(`定位精度約 ±${Math.round(geo.acc)} m`);
+  const nearest = Math.min(...SHOPS.map((s) => haversine(geo, s)));
+  if (nearest > 1500) notes.push(`你目前離商圈約 ${fmtDist(nearest)}，路線從現在位置起算`);
+  if (plan.stops.some((s) => s.approx)) notes.push('部分店家座標由鄰近門牌推算，誤差約 10 公尺');
+  notes.push('距離為直線距離，實際步行會再長一些');
+  document.getElementById('planNote').textContent = notes.join('；');
+
+  panel.hidden = false;
+  if (scroll) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/** 路線開著時，蓋章後即時重算剩下的路 */
+function refreshPlanIfOpen() {
+  if (document.getElementById('routePanel').hidden || !geo) return;
+  const plan = planRoute(geo);
+  if (plan) renderPlan(plan, { scroll: false });
+  else closePlan();
+}
+
+/** 主動作：定位 → 規劃最短集滿路線；定位失敗則退回不需定位的隨機推薦 */
+async function handlePlanClick() {
+  const btn = document.getElementById('nextStopBtn');
+  const label = btn.querySelector('.fab__text');
+  const prev = label.textContent;
+  btn.disabled = true;
+  label.textContent = '定位中…';
+
+  try {
+    geo = await locate();
+    document.getElementById('nearOption').disabled = false;
+    const plan = planRoute(geo);
+    render();
+    if (plan) renderPlan(plan);
+    else toast('70 家都集滿了，沒有下一段路要走');
+  } catch (err) {
+    // 後備建議自己也會 toast，會蓋掉失敗原因 → 讓它安靜，兩件事併成一則訊息
+    const fallback = suggestNextStop({ silent: true });
+    toast(fallback
+      ? `${geoErrorMessage(err)}。先推薦 ${String(fallback.shop.id).padStart(2, '0')} ${fallback.shop.name}`
+      : geoErrorMessage(err));
+  } finally {
+    label.textContent = prev;
+    btn.disabled = false;
+  }
+}
+
+/**
+ * 依「彩虹任務最缺的顏色」推薦下一家沒去過的店（定位失敗時的後備）
+ * silent 時不自己跳 toast，交由呼叫端合併訊息；回傳挑中的店
+ */
+function suggestNextStop({ silent = false } = {}) {
   const { perColor, rounds } = stats();
   const remaining = SHOPS.filter((s) => !state.collected.has(s.id));
 
   if (!remaining.length) {
-    toast('🎊 70 家都集滿了，沒有下一站了！');
-    return;
+    if (!silent) toast('🎊 70 家都集滿了，沒有下一站了！');
+    return null;
   }
 
   let pool = remaining;
@@ -423,27 +717,32 @@ function suggestNextStop() {
     ? `補第 ${rounds + 1} 次彩虹的${COLOR_MAP[pick.color].label}色`
     : '衝 70 家大獎';
 
-  // 若目前的篩選會讓推薦店家不在畫面上，先清掉篩選再捲過去
-  if (!filtered().some((s) => s.id === pick.id)) {
-    ui.query = '';
-    ui.colors.clear();
-    ui.status = 'all';
-    ui.street = 'all';
-    document.getElementById('search').value = '';
-    document.getElementById('searchClear').hidden = true;
-    document.getElementById('streetSelect').value = 'all';
-    syncStatusChips();
-  }
+  focusShop(pick.id);
+  if (!silent) toast(`下一站：${String(pick.id).padStart(2, '0')} ${pick.name}（${reason}）`);
+  return { shop: pick, reason };
+}
 
+function resetFilters() {
+  ui.query = '';
+  ui.colors.clear();
+  ui.status = 'all';
+  ui.street = 'all';
+  document.getElementById('search').value = '';
+  document.getElementById('searchClear').hidden = true;
+  document.getElementById('streetSelect').value = 'all';
+  syncStatusChips();
+}
+
+/** 捲到某家店的卡片並高亮；若被篩選擋住就先放寬條件 */
+function focusShop(id) {
+  if (!filtered().some((s) => s.id === id)) resetFilters();
   render();
 
-  const card = board.querySelector(`.card[data-id="${pick.id}"]`);
-  if (card) {
-    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    card.classList.add('is-spotlight');
-    setTimeout(() => card.classList.remove('is-spotlight'), 3200);
-  }
-  toast(`下一站：${String(pick.id).padStart(2, '0')} ${pick.name}（${reason}）`);
+  const card = board.querySelector(`.card[data-id="${id}"]`);
+  if (!card) return;
+  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  card.classList.add('is-spotlight');
+  setTimeout(() => card.classList.remove('is-spotlight'), 3200);
 }
 
 // ── 工具列同步 ─────────────────────────────────────────────
@@ -576,6 +875,7 @@ function importBackup(file) {
       }
       save();
       render();
+      refreshPlanIfOpen();
       toast(`已還原 ${state.collected.size} 家的集章紀錄`);
     } catch (err) {
       toast('備份檔讀取失敗，請確認是本站匯出的 JSON');
@@ -684,7 +984,23 @@ function bindEvents() {
     if (btn.dataset.action === 'note') editNote(id);
   });
 
-  document.getElementById('nextStopBtn').addEventListener('click', suggestNextStop);
+  document.getElementById('nextStopBtn').addEventListener('click', handlePlanClick);
+  document.getElementById('planRefresh').addEventListener('click', handlePlanClick);
+  document.getElementById('planClose').addEventListener('click', closePlan);
+
+  // 點路線上的某一站 → 跳到那張卡片
+  const planList = document.getElementById('planList');
+  planList.addEventListener('click', (e) => {
+    const stop = e.target.closest('.stop');
+    if (stop) focusShop(Number(stop.dataset.id));
+  });
+  planList.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const stop = e.target.closest('.stop');
+    if (!stop) return;
+    e.preventDefault();
+    stop.click();
+  });
 
   document.getElementById('themeToggle').addEventListener('click', () => {
     applyTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light');
@@ -710,6 +1026,7 @@ function bindEvents() {
     state.notes = {};
     save();
     render();
+    refreshPlanIfOpen();
     toast('已清除所有紀錄');
   });
 }

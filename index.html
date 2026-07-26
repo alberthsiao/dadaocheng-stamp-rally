@@ -111,12 +111,32 @@
           <option value="color">依顏色</option>
           <option value="route">依街道（走路順序）</option>
           <option value="number">依編號</option>
+          <option value="near" id="nearOption" disabled>依距離（需定位）</option>
         </select>
       </label>
     </div>
   </div>
 
   <p class="toolbar__count" id="resultCount"></p>
+</section>
+
+<!-- ── 路線規劃結果 ───────────────────────────────────── -->
+<section class="panel plan" id="routePanel" hidden aria-labelledby="planTitle">
+  <div class="plan__head">
+    <h2 class="plan__title" id="planTitle">建議路線</h2>
+    <button class="icon-btn icon-btn--sm" id="planClose" type="button" aria-label="關閉路線建議">
+      <span class="icon-btn__glyph" aria-hidden="true">×</span>
+    </button>
+  </div>
+
+  <p class="plan__summary" id="planSummary"></p>
+  <ol class="plan__list" id="planList"></ol>
+
+  <div class="btn-row">
+    <a class="btn btn--primary" id="planNav" href="#" target="_blank" rel="noopener noreferrer">用 Google Maps 導航整條路線</a>
+    <button class="btn" id="planRefresh" type="button">重新定位</button>
+  </div>
+  <p class="plan__note" id="planNote"></p>
 </section>
 
 <main id="board" class="board"></main>
@@ -164,10 +184,10 @@
   <p class="footer__muted">資料整理自活動 DM，僅供逛街參考。</p>
 </footer>
 
-<!-- 浮動：下一站推薦 -->
+<!-- 浮動：規劃最短集滿路線 -->
 <button class="fab" id="nextStopBtn" type="button">
-  <span class="fab__icon" aria-hidden="true">🎲</span>
-  <span class="fab__text">下一站去哪</span>
+  <span class="fab__icon" aria-hidden="true">🧭</span>
+  <span class="fab__text">規劃最短路線</span>
 </button>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>

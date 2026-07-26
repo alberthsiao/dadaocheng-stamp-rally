@@ -443,6 +443,122 @@ button, input, select { font: inherit; color: inherit; }
   color: var(--muted);
 }
 
+/* ── 路線規劃面板 ─────────────────────────────────────── */
+.plan {
+  border-color: var(--border-strong);
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--gold) 10%, transparent), var(--surface) 55%);
+}
+
+.plan__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.plan__title {
+  margin: 0;
+  font-size: 1.15rem;
+  color: var(--gold);
+}
+
+.icon-btn--sm { width: 30px; height: 30px; flex: 0 0 auto; }
+.icon-btn--sm:hover { transform: none; }
+
+.plan__summary {
+  margin: 4px 0 14px;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+.plan__summary strong { color: var(--text); font-weight: 700; }
+
+.plan__list { margin: 0; padding: 0; list-style: none; }
+
+.stop {
+  --c: var(--gold);
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 8px 7px 0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.stop:hover { background: var(--surface-2); }
+
+/* 站與站之間的連接線，看起來像一條路 */
+.stop:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  left: 14px;
+  top: 38px;
+  bottom: -8px;
+  width: 2px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--c) 70%, transparent), transparent);
+}
+
+.stop__no {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+  width: 30px; height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--c);
+  color: #fff;
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.stop__body { flex: 1; min-width: 0; }
+
+.stop__name {
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 0.98rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.stop__addr {
+  font-size: 0.76rem;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stop__dist {
+  flex: 0 0 auto;
+  font-size: 0.8rem;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.plan__note {
+  margin: 10px 0 0;
+  font-size: 0.74rem;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.btn--primary {
+  background: linear-gradient(135deg, var(--gold), var(--gold-dim));
+  border-color: var(--gold);
+  color: #241a08;
+  font-weight: 700;
+  text-decoration: none;
+}
+[data-theme="light"] .btn--primary { color: #fff8e8; }
+.btn--primary:hover {
+  background: linear-gradient(135deg, var(--gold), var(--gold-dim));
+  filter: brightness(1.08);
+}
+
 /* ── 店家看板 ─────────────────────────────────────────── */
 .board {
   max-width: var(--maxw);
@@ -578,6 +694,13 @@ button, input, select { font: inherit; color: inherit; }
   font-size: 0.76rem;
   color: var(--muted);
   opacity: 0.85;
+}
+
+.card__dist {
+  margin-top: 3px;
+  font-size: 0.78rem;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
 }
 
 .card__note {
@@ -772,7 +895,8 @@ button, input, select { font: inherit; color: inherit; }
   z-index: 50;
   max-width: min(92vw, 420px);
   padding: 11px 18px;
-  border-radius: 999px;
+  border-radius: 16px;
+  line-height: 1.5;
   border: 1px solid var(--border-strong);
   background: var(--bg-2);
   color: var(--text);
