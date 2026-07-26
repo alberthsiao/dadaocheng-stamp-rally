@@ -391,7 +391,7 @@ function cardEl(shop, freshId) {
 
   const stamp = document.createElement('div');
   stamp.className = 'card__stamp';
-  stamp.textContent = '已集';
+  stamp.textContent = '已蓋';
   card.appendChild(stamp);
 
   const actions = document.createElement('div');
@@ -401,8 +401,12 @@ function cardEl(shop, freshId) {
   toggle.type = 'button';
   toggle.className = 'act act--toggle';
   toggle.dataset.action = 'toggle';
-  toggle.textContent = done ? '取消集章' : '蓋章';
+  // 「已蓋章」是回報狀態（你在店裡蓋完了），不是叫網站幫你蓋
+  toggle.textContent = done ? '☑ 已蓋章' : '☐ 已蓋章';
   toggle.setAttribute('aria-pressed', String(done));
+  toggle.setAttribute('aria-label', done
+    ? `取消 ${shop.name} 的已蓋章標記`
+    : `標記 ${shop.name} 已在紙本蓋章`);
   actions.appendChild(toggle);
 
   const map = document.createElement('a');
@@ -459,7 +463,7 @@ function render(freshId) {
       const doneCount = group.shops.filter((s) => state.collected.has(s.id)).length;
       const meta = document.createElement('span');
       meta.className = 'group__meta';
-      meta.textContent = `${doneCount} / ${group.shops.length} 已集章`;
+      meta.textContent = `${doneCount} / ${group.shops.length} 已蓋章`;
       head.appendChild(meta);
 
       section.appendChild(head);
@@ -486,7 +490,7 @@ function renderProgress() {
   document.getElementById('statGacha').textContent = String(rounds);
   document.getElementById('totalBar').style.width = `${(total / SHOPS.length) * 100}%`;
   document.getElementById('totalBarWrap')
-    .setAttribute('aria-label', `總集章進度 ${total} / ${SHOPS.length}`);
+    .setAttribute('aria-label', `已蓋章進度 ${total} / ${SHOPS.length}`);
 
   // 提示文字：告訴使用者下一步該蒐集什麼顏色
   const hint = document.getElementById('nextHint');
@@ -495,14 +499,14 @@ function renderProgress() {
   } else if (rounds >= MAX_ROUNDS) {
     hint.innerHTML = `<strong>三次彩虹都湊齊了！</strong>再走 ${SHOPS.length - total} 家就能挑戰 70 家大獎摸彩。`;
   } else if (total === 0) {
-    hint.textContent = '七色各集 1 家＝完成 1 次彩虹任務，最多 3 次。點「蓋章」記錄你走過的店。';
+    hint.textContent = '七色各蓋 1 家＝1 次彩虹任務，最多 3 次。在店裡蓋完章後，回來點「☐ 已蓋章」做紀錄。';
   } else if (missing.length === COLORS.length) {
-    hint.innerHTML = `第 <strong>${rounds + 1}</strong> 次彩虹任務：七色各再集 1 家（須是不同編號的店）`;
+    hint.innerHTML = `第 <strong>${rounds + 1}</strong> 次彩虹：七色各再蓋 1 家（須是不同編號的店）`;
   } else {
     const chips = missing
       .map((c) => `<strong style="color:${c.hex}">${c.label}</strong>`)
       .join('、');
-    hint.innerHTML = `第 ${rounds + 1} 次彩虹任務還缺：${chips}`;
+    hint.innerHTML = `第 ${rounds + 1} 次彩虹還缺：${chips}`;
   }
 
   // 七色長條
@@ -515,7 +519,7 @@ function renderProgress() {
     li.tabIndex = 0;
     li.setAttribute('role', 'button');
     li.setAttribute('aria-pressed', String(ui.colors.has(c.key)));
-    li.setAttribute('aria-label', `${c.label}色 已集 ${perColor[c.key]} 家，共 10 家`);
+    li.setAttribute('aria-label', `${c.label}色 已蓋 ${perColor[c.key]} 家，共 10 家`);
     li.dataset.color = c.key;
 
     const label = document.createElement('span');
@@ -691,7 +695,7 @@ function renderMap() {
     const hex = COLOR_MAP[shop.color].hex;
     const step = planIds.indexOf(shop.id);
     parts.push(
-      `<g class="pin${done ? ' is-done' : ''}${step >= 0 ? ' is-stop' : ''}" data-id="${shop.id}" tabindex="0" role="button" aria-label="${shop.name}，${shop.addr}${done ? '，已集章' : ''}">`
+      `<g class="pin${done ? ' is-done' : ''}${step >= 0 ? ' is-stop' : ''}" data-id="${shop.id}" tabindex="0" role="button" aria-label="${shop.name}，${shop.addr}${done ? '，已蓋章' : ''}">`
       + `<circle class="pin__hit" cx="${Math.round(x)}" cy="${Math.round(y)}" r="26"/>`
       + `<circle class="pin__dot" cx="${Math.round(x)}" cy="${Math.round(y)}" r="13" fill="${hex}"/>`
       + (done ? `<circle class="pin__done" cx="${Math.round(x)}" cy="${Math.round(y)}" r="5"/>` : '')
@@ -716,7 +720,7 @@ function renderMap() {
   const legend = document.getElementById('mapLegend');
   if (!legend.childElementCount) {
     legend.innerHTML = COLORS.map((c) => `<span class="lg"><i style="background:${c.hex}"></i>${c.label}</span>`).join('')
-      + '<span class="lg"><i class="lg__done"></i>已集章</span>'
+      + '<span class="lg"><i class="lg__done"></i>已蓋章</span>'
       + '<span class="lg"><i class="lg__me"></i>我的位置</span>';
   }
   mapRendered = true;
@@ -741,8 +745,8 @@ function renderPlan(plan, { scroll = true } = {}) {
   const list = document.getElementById('planList');
 
   document.getElementById('planTitle').textContent = plan.mode === 'rainbow'
-    ? `最快完成第 ${plan.round} 次彩虹任務`
-    : '就近再收幾家，衝 70 家大獎';
+    ? `最快湊齊第 ${plan.round} 次彩虹的路線`
+    : '就近再走幾家（朝 70 家前進）';
 
   document.getElementById('planSummary').innerHTML =
     `共 <strong>${plan.stops.length}</strong> 站・步行 <strong>${fmtDist(plan.total)}</strong>・${fmtWalk(plan.total)}`;
@@ -872,7 +876,7 @@ function suggestNextStop({ silent = false } = {}) {
   const pick = pool[Math.floor(Math.random() * pool.length)];
   const reason = rounds < MAX_ROUNDS
     ? `補第 ${rounds + 1} 次彩虹的${COLOR_MAP[pick.color].label}色`
-    : '衝 70 家大獎';
+    : '朝 70 家前進';
 
   focusShop(pick.id);
   if (!silent) toast(`下一站：${String(pick.id).padStart(2, '0')} ${pick.name}（${reason}）`);

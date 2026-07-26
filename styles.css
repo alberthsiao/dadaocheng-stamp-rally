@@ -176,6 +176,14 @@ button, input, select { font: inherit; color: inherit; }
   font-size: 0.82rem;
   color: var(--muted);
 }
+/* 身分標記：讓人一眼看出這不是官方網站 */
+.pill--warn {
+  border-color: color-mix(in srgb, var(--danger) 55%, transparent);
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+  color: var(--danger);
+  font-weight: 700;
+}
+
 .pill--accent {
   border-color: var(--border-strong);
   color: var(--gold);

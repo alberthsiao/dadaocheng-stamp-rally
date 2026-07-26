@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>璀璨煙火・時光拼圖｜大稻埕永樂町逛街地圖</title>
-<meta name="description" content="永樂町商圈「璀璨煙火・時光拼圖」70 家店集章活動的逛街助手：依顏色與街道找店、規劃路線、記錄集章進度與彩虹任務。">
+<title>璀璨煙火・時光拼圖 逛街地圖｜非官方輔助工具</title>
+<meta name="description" content="永樂町商圈「璀璨煙火・時光拼圖」活動的非官方逛街輔助工具：依顏色與街道找 70 家店、規劃步行路線、記錄自己的蓋章進度。站內紀錄不等於官方印章，一切以主辦單位公告為準。">
 <meta name="theme-color" content="#101736">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
@@ -29,9 +29,10 @@
     </div>
 
     <h1 class="hero__title">璀璨煙火<span class="hero__dot">・</span>時光拼圖</h1>
-    <p class="hero__sub">大稻埕・永樂町商圈 70 家店集章逛街地圖</p>
+    <p class="hero__sub">大稻埕・永樂町商圈 70 家店逛街地圖</p>
 
     <div class="hero__meta">
+      <span class="pill pill--warn">非官方・民間自製</span>
       <span class="pill" id="dateRange">115年7月25日 – 8月14日</span>
       <span class="pill pill--accent" id="countdown">活動進行中</span>
     </div>
@@ -57,20 +58,20 @@
 
 <!-- ── 進度儀表 ───────────────────────────────────────── -->
 <section class="panel progress" aria-labelledby="progressHeading">
-  <h2 class="sr-only" id="progressHeading">集章進度</h2>
+  <h2 class="sr-only" id="progressHeading">我的蓋章進度</h2>
 
   <div class="progress__stats">
     <div class="stat">
       <span class="stat__num" id="statStamps">0</span>
-      <span class="stat__label">已集章 / 70</span>
+      <span class="stat__label">已蓋章 / 70</span>
     </div>
     <div class="stat stat--hero">
       <span class="stat__num" id="statRounds">0</span>
-      <span class="stat__label">彩虹任務完成</span>
+      <span class="stat__label">彩虹湊齊次數</span>
     </div>
     <div class="stat">
       <span class="stat__num" id="statGacha">0</span>
-      <span class="stat__label">可夾扭蛋次數</span>
+      <span class="stat__label">對應扭蛋次數</span>
     </div>
   </div>
 
@@ -82,11 +83,11 @@
     </span>
   </p>
 
-  <div class="bar" role="img" aria-label="總集章進度" id="totalBarWrap">
+  <div class="bar" role="img" aria-label="已蓋章進度" id="totalBarWrap">
     <div class="bar__fill" id="totalBar"></div>
   </div>
 
-  <p class="progress__hint" id="nextHint">七色各集 1 家＝完成 1 次彩虹任務，最多 3 次。</p>
+  <p class="progress__hint" id="nextHint">七色各蓋 1 家＝1 次彩虹任務，最多 3 次。</p>
 
   <ul class="rainbow" id="rainbow"></ul>
 </section>
@@ -145,8 +146,8 @@
 
     <div class="chips chips--status" role="group" aria-label="狀態篩選">
       <button class="chip chip--status is-on" data-status="all" type="button">全部</button>
-      <button class="chip chip--status" data-status="todo" type="button">未集章</button>
-      <button class="chip chip--status" data-status="done" type="button">已集章</button>
+      <button class="chip chip--status" data-status="todo" type="button">未蓋章</button>
+      <button class="chip chip--status" data-status="done" type="button">已蓋章</button>
     </div>
 
     <div class="selects">
@@ -255,7 +256,10 @@
 
 <footer class="footer">
   <p>同享太平・共榮永樂</p>
-  <p class="footer__muted">資料整理自活動 DM，僅供逛街參考。</p>
+  <p class="footer__muted">
+    「同享太平・共榮永樂」為活動標語。本站是<strong>非官方</strong>的民間自製工具，
+    與主辦單位無隸屬關係；資料整理自活動 DM，僅供逛街參考。
+  </p>
 </footer>
 
 <!-- 浮動：規劃最短集滿路線 -->
