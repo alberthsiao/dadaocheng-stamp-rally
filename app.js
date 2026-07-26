@@ -809,6 +809,12 @@ function refreshPlanIfOpen() {
   else closePlan();
 }
 
+function showGeoHelp() {
+  const panel = document.getElementById('geoHelp');
+  panel.hidden = false;
+  panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
 /** 主動作：定位 → 規劃最短集滿路線；定位失敗則退回不需定位的隨機推薦 */
 async function handlePlanClick() {
   const btn = document.getElementById('nextStopBtn');
@@ -819,6 +825,7 @@ async function handlePlanClick() {
 
   try {
     geo = await locate();
+    document.getElementById('geoHelp').hidden = true;
     document.getElementById('nearOption').disabled = false;
     const plan = planRoute(geo);
     render();
@@ -831,6 +838,9 @@ async function handlePlanClick() {
     toast(fallback
       ? `${geoErrorMessage(err)}。先推薦 ${String(fallback.shop.id).padStart(2, '0')} ${fallback.shop.name}`
       : geoErrorMessage(err));
+
+    // 被拒絕之後瀏覽器不會再問，光靠 toast 講不清楚怎麼救 → 開指引
+    if (err && err.code === 1) showGeoHelp();
   } finally {
     label.textContent = prev;
     btn.disabled = false;
@@ -1171,6 +1181,9 @@ function bindEvents() {
   document.getElementById('nextStopBtn').addEventListener('click', handlePlanClick);
   document.getElementById('planRefresh').addEventListener('click', handlePlanClick);
   document.getElementById('planClose').addEventListener('click', closePlan);
+  document.getElementById('geoHelpClose').addEventListener('click', () => {
+    document.getElementById('geoHelp').hidden = true;
+  });
 
   // 點路線上的某一站 → 跳到那張卡片
   const planList = document.getElementById('planList');

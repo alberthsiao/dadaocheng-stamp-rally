@@ -169,6 +169,49 @@
   <p class="toolbar__count" id="resultCount"></p>
 </section>
 
+<!-- ── 定位被拒絕時的重新授權指引 ─────────────────────── -->
+<section class="panel geohelp" id="geoHelp" hidden aria-labelledby="geoHelpTitle">
+  <div class="plan__head">
+    <h2 class="plan__title" id="geoHelpTitle">定位被拒絕了</h2>
+    <button class="icon-btn icon-btn--sm" id="geoHelpClose" type="button" aria-label="關閉說明">
+      <span class="icon-btn__glyph" aria-hidden="true">×</span>
+    </button>
+  </div>
+
+  <p class="geohelp__lead">瀏覽器記住了「不允許」，之後就不會再跳出詢問。要重新開啟：</p>
+
+  <div class="geohelp__ways">
+    <div class="way">
+      <p class="way__title">iPhone・Safari</p>
+      <ol class="way__steps">
+        <li>點網址列左邊的 <strong>ᴀA</strong></li>
+        <li>網站設定 → 位置 → 改成<strong>允許</strong></li>
+        <li>回來重新整理，再按一次規劃</li>
+      </ol>
+    </div>
+    <div class="way">
+      <p class="way__title">Android・Chrome</p>
+      <ol class="way__steps">
+        <li>點網址列左邊的<strong>鎖頭</strong>圖示</li>
+        <li>權限 → 位置 → 改成<strong>允許</strong></li>
+        <li>回來重新整理，再按一次規劃</li>
+      </ol>
+    </div>
+    <div class="way">
+      <p class="way__title">已加到主畫面</p>
+      <ol class="way__steps">
+        <li>iPhone：設定 → 隱私權與安全性 → <strong>定位服務</strong>，找到這個 app 設為「使用 App 期間」</li>
+        <li>Android：長按圖示 → 應用程式資訊 → 權限 → 位置</li>
+      </ol>
+    </div>
+  </div>
+
+  <p class="geohelp__alt">
+    不想開定位也沒關係：把檢視切成<strong>「依街道」</strong>，同一條街會按門牌排好，就是順著走的順序；
+    或展開上方<strong>地圖</strong>對照位置。只有「算出離你最近的路線」需要定位。
+  </p>
+</section>
+
 <!-- ── 路線規劃結果 ───────────────────────────────────── -->
 <section class="panel plan" id="routePanel" hidden aria-labelledby="planTitle">
   <div class="plan__head">

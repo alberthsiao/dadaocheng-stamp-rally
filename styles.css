@@ -601,6 +601,59 @@ button, input, select { font: inherit; color: inherit; }
   opacity: 0.85;
 }
 
+/* ── 定位授權指引 ─────────────────────────────────────── */
+.geohelp {
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--danger) 10%, transparent), var(--surface) 55%);
+}
+.geohelp .plan__title { color: var(--danger); }
+
+.geohelp__lead {
+  margin: 4px 0 14px;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+.geohelp__ways {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+}
+
+.way {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.way__title {
+  margin: 0 0 7px;
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--gold);
+}
+.way__steps {
+  margin: 0;
+  padding-left: 1.2em;
+  font-size: 0.82rem;
+  line-height: 1.7;
+  color: var(--text);
+}
+.way__steps strong { color: var(--gold); }
+
+.geohelp__alt {
+  margin: 14px 0 0;
+  padding: 11px 13px;
+  border-radius: 10px;
+  border: 1px dashed var(--border-strong);
+  font-size: 0.83rem;
+  line-height: 1.7;
+  color: var(--muted);
+}
+.geohelp__alt strong { color: var(--gold); }
+
 /* ── 路線規劃面板 ─────────────────────────────────────── */
 .plan {
   border-color: var(--border-strong);
@@ -932,17 +985,42 @@ button, input, select { font: inherit; color: inherit; }
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 12px 14px;
+  padding: 14px;
+  min-height: 52px;                /* 手機觸控目標 */
   cursor: pointer;
   font-family: var(--serif);
   font-weight: 700;
   color: var(--gold);
   list-style: none;
+  /* 收合時整條像個可按的橫幅，展開後淡化 */
+  background: color-mix(in srgb, var(--gold) 10%, transparent);
+  transition: background 0.15s;
+}
+.details__summary:hover { background: color-mix(in srgb, var(--gold) 16%, transparent); }
+.details__summary:active { background: color-mix(in srgb, var(--gold) 22%, transparent); }
+.details[open] > .details__summary {
+  background: transparent;
+  border-bottom: 1px solid var(--border);
 }
 .details__summary::-webkit-details-marker { display: none; }
-.details__arrow { transition: transform 0.2s; color: var(--muted); }
+
+/* 箭頭做成圓形按鈕，不然手機上看不出可以點 */
+.details__arrow {
+  flex: 0 0 auto;
+  width: 28px; height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--gold) 22%, transparent);
+  border: 1px solid color-mix(in srgb, var(--gold) 40%, transparent);
+  color: var(--gold);
+  font-size: 0.8rem;
+  line-height: 1;
+  transition: transform 0.2s, background 0.15s;
+}
 .details[open] .details__arrow { transform: rotate(180deg); }
-.details__body { padding: 0 14px 16px; }
+
+.details__body { padding: 14px 14px 16px; }
 
 .callout {
   padding: 11px 13px;
