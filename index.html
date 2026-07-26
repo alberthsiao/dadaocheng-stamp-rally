@@ -91,6 +91,32 @@
   <ul class="rainbow" id="rainbow"></ul>
 </section>
 
+<!-- ── 活動規則（DM 原文） ────────────────────────────── -->
+<section class="panel rulespanel" aria-labelledby="rulesHeading">
+  <h2 class="rulespanel__title" id="rulesHeading">活動規則</h2>
+  <p class="rulespanel__tagline" id="tagline"></p>
+
+  <div class="callout">
+    <p class="callout__title">扭蛋地點</p>
+    <p><a class="callout__link" id="gachaPlace" href="#" target="_blank" rel="noopener noreferrer"></a></p>
+    <p class="callout__muted" id="gachaHours"></p>
+  </div>
+
+  <details class="details" id="rulesDetails" open>
+    <summary class="details__summary">
+      <span>完整活動規則（共 9 條）</span>
+      <span class="details__arrow" aria-hidden="true">▾</span>
+    </summary>
+    <div class="details__body">
+      <ol class="rules" id="rulesList"></ol>
+      <p class="info__credit">
+        主辦：<span id="organizer"></span>　指導單位：<span id="advisor"></span><br>
+        以上規則為活動 DM 原文照錄。本站為非官方逛街輔助工具，一切以官方 DM 及主辦單位公告為準。
+      </p>
+    </div>
+  </details>
+</section>
+
 <!-- ── 地圖 ───────────────────────────────────────────── -->
 <section class="panel mapwrap">
   <details class="details" id="mapDetails">
@@ -164,28 +190,9 @@
 
 <main id="board" class="board"></main>
 
-<!-- ── 活動資訊 ───────────────────────────────────────── -->
+<!-- ── 我的紀錄 ───────────────────────────────────────── -->
 <section class="panel info">
-  <details class="details" id="rulesDetails">
-    <summary class="details__summary">
-      <span>活動規則與扭蛋地點</span>
-      <span class="details__arrow" aria-hidden="true">▾</span>
-    </summary>
-    <div class="details__body">
-      <div class="callout">
-        <p class="callout__title">扭蛋地點</p>
-        <p><a class="callout__link" id="gachaPlace" href="#" target="_blank" rel="noopener noreferrer"></a></p>
-        <p class="callout__muted" id="gachaHours"></p>
-      </div>
-      <ol class="rules" id="rulesList"></ol>
-      <p class="info__credit">
-        主辦：<span id="organizer"></span>　指導單位：<span id="advisor"></span><br>
-        本站為非官方逛街輔助工具，活動規則以官方 DM 及主辦單位公告為準。
-      </p>
-    </div>
-  </details>
-
-  <details class="details">
+  <details class="details" id="backupDetails">
     <summary class="details__summary">
       <span>我的紀錄（備份／還原）</span>
       <span class="details__arrow" aria-hidden="true">▾</span>

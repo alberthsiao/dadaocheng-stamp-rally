@@ -948,6 +948,7 @@ function buildStreetSelect() {
 function fillEventInfo() {
   document.getElementById('kicker').textContent = EVENT.subtitle.split('｜')[0];
   document.getElementById('dateRange').textContent = EVENT.dateLabel;
+  document.getElementById('tagline').textContent = EVENT.tagline;
   document.getElementById('linkMap').href = EVENT.links.map;
   document.getElementById('linkVideo').href = EVENT.links.video;
   const gachaPlace = document.getElementById('gachaPlace');
@@ -1041,6 +1042,24 @@ function toast(message) {
   el.classList.add('is-show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.classList.remove('is-show'), 2600);
+}
+
+// ── 摺疊區狀態記憶 ─────────────────────────────────────────
+
+const DETAILS_KEY = 'yongle-details';
+
+/** 記住使用者把哪些區塊收合了：規則第一次進站是展開的，收起來後就不再擋路 */
+function initDetailsMemory() {
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(DETAILS_KEY) || '{}'); } catch { saved = {}; }
+
+  document.querySelectorAll('details[id]').forEach((d) => {
+    if (typeof saved[d.id] === 'boolean') d.open = saved[d.id];
+    d.addEventListener('toggle', () => {
+      saved[d.id] = d.open;
+      try { localStorage.setItem(DETAILS_KEY, JSON.stringify(saved)); } catch { /* 無痕模式忽略 */ }
+    });
+  });
 }
 
 // ── 主題 ───────────────────────────────────────────────────
@@ -1227,5 +1246,6 @@ fillEventInfo();
 buildColorChips();
 buildStreetSelect();
 bindEvents();
+initDetailsMemory();
 render();
 initServiceWorker();

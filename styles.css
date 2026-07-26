@@ -472,6 +472,32 @@ button, input, select { font: inherit; color: inherit; }
   color: var(--muted);
 }
 
+/* ── 活動規則 ─────────────────────────────────────────── */
+.rulespanel__title {
+  margin: 0 0 8px;
+  font-size: 1.15rem;
+  color: var(--gold);
+}
+
+/* DM 正面的宣傳標語，原文照錄 */
+.rulespanel__tagline {
+  margin: 0 0 14px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  border: 1px dashed var(--border-strong);
+  background: color-mix(in srgb, var(--gold) 9%, transparent);
+  font-family: var(--serif);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.6;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+
+.rulespanel .details { margin-top: 12px; }
+.rulespanel .rules { font-size: 0.84rem; color: var(--text); opacity: 0.92; }
+.rulespanel .rules li { margin-bottom: 9px; }
+
 /* ── 地圖（OSM 街道向量，離線可繪） ───────────────────── */
 .map {
   border-radius: 10px;
