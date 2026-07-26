@@ -556,7 +556,6 @@ function toggleStamp(id) {
     render();
     refreshPlanIfOpen();
     refreshMapIfOpen();
-    analytics.send('unstamp', { shop: id, total: state.collected.size });
     toast(`已取消 ${String(id).padStart(2, '0')} ${shop.name} 的紀錄`);
     return;
   }
@@ -568,10 +567,6 @@ function toggleStamp(id) {
   refreshMapIfOpen();
 
   const after = stats();
-  analytics.send('stamp', { shop: id, color: shop.color, total: after.total });
-  if (after.rounds > before.rounds) analytics.send('rainbow', { round: after.rounds, total: after.total });
-  if (after.total === SHOPS.length) analytics.send('complete', { total: after.total });
-
   if (after.total === SHOPS.length) {
     toast('🎊 70 家都走完了！紙本 DM 蓋滿 70 家才能投摸彩箱');
   } else if (after.rounds > before.rounds) {
@@ -835,14 +830,6 @@ async function handlePlanClick() {
     const plan = planRoute(geo);
     render();
     refreshMapIfOpen();
-    if (plan) {
-      analytics.send('route', {
-        stops: plan.stops.length,
-        dist: Math.round(plan.total),
-        mode: plan.mode,
-        total: state.collected.size,
-      });
-    }
     if (plan) renderPlan(plan);
     else toast('70 家都集滿了，沒有下一段路要走');
   } catch (err) {
@@ -853,7 +840,6 @@ async function handlePlanClick() {
       : geoErrorMessage(err));
 
     // 被拒絕之後瀏覽器不會再問，光靠 toast 講不清楚怎麼救 → 開指引
-    analytics.send('geo_fail', { code: err && err.code });
     if (err && err.code === 1) showGeoHelp();
   } finally {
     label.textContent = prev;
@@ -1178,7 +1164,6 @@ function bindEvents() {
   const mapDetails = document.getElementById('mapDetails');
   mapDetails.addEventListener('toggle', () => {
     if (mapDetails.open && !mapRendered) renderMap();
-    if (mapDetails.open) analytics.send('map_open');
   });
   const mapHost = document.getElementById('map');
   mapHost.addEventListener('click', (e) => {
@@ -1244,32 +1229,6 @@ function bindEvents() {
   });
 }
 
-// ── 匿名統計的開關與告知 ───────────────────────────────────
-
-function initAnalyticsUI() {
-  const row = document.getElementById('analyticsRow');
-  const toggle = document.getElementById('analyticsToggle');
-  if (!row || !toggle) return;
-
-  // 沒設定端點就整組隱藏，免得出現一個沒有作用的開關
-  if (!ANALYTICS_ENDPOINT) {
-    row.hidden = true;
-    return;
-  }
-
-  toggle.checked = !analytics.isOptedOut();
-  toggle.addEventListener('change', () => {
-    analytics.setOptOut(!toggle.checked);
-    toast(toggle.checked ? '已開啟匿名統計' : '已關閉，之後不會再傳送任何統計');
-  });
-
-  // 第一次進站告知一次就好，不重複打擾
-  if (analytics.shouldNotice()) {
-    analytics.markNoticed();
-    setTimeout(() => toast('本站會傳送不記名的使用統計，協助主辦單位了解活動成效。可在「我的紀錄」關閉'), 1200);
-  }
-}
-
 // ── Service Worker：街上沒訊號也打得開 ─────────────────────
 
 function initServiceWorker() {
@@ -1301,7 +1260,5 @@ buildColorChips();
 buildStreetSelect();
 bindEvents();
 initDetailsMemory();
-initAnalyticsUI();
 render();
 initServiceWorker();
-analytics.send('visit', { total: state.collected.size });
