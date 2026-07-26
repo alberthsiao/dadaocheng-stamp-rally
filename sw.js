@@ -4,13 +4,14 @@
    改版時把 CACHE 的版本號 +1，舊快取會在 activate 時清掉
    ══════════════════════════════════════════════════════════ */
 
-const CACHE = 'yongle-shopping-v3';
+const CACHE = 'yongle-shopping-v5';
 
 const ASSETS = [
   './',
   './index.html',
   './styles.css',
   './data.js',
+  './mapdata.js',
   './app.js',
   './manifest.json',
   './icons/icon-192.png',

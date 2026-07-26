@@ -83,6 +83,9 @@ function stats() {
 /** 使用者目前位置；null = 尚未定位 */
 let geo = null;
 
+/** 目前規劃出的路線；地圖用它畫連線與站序 */
+let currentPlan = null;
+
 const EARTH_R = 6371000;
 
 /** 兩點間大圓距離（公尺）。大稻埕範圍小，這個精度綽綽有餘 */
@@ -488,9 +491,9 @@ function renderProgress() {
   // 提示文字：告訴使用者下一步該蒐集什麼顏色
   const hint = document.getElementById('nextHint');
   if (total === SHOPS.length) {
-    hint.innerHTML = '<strong>70 家全數集滿！</strong>記得投摸彩箱，參加 8/15 直播大獎摸彩。';
+    hint.innerHTML = '<strong>70 家都走完了！</strong>紙本 DM 蓋滿 70 家印章，即可投摸彩箱參加 8/15 直播摸彩。';
   } else if (rounds >= MAX_ROUNDS) {
-    hint.innerHTML = `<strong>三次彩虹任務全達成！</strong>再收 ${SHOPS.length - total} 家即可挑戰 70 家大獎摸彩。`;
+    hint.innerHTML = `<strong>三次彩虹都湊齊了！</strong>再走 ${SHOPS.length - total} 家就能挑戰 70 家大獎摸彩。`;
   } else if (total === 0) {
     hint.textContent = '七色各集 1 家＝完成 1 次彩虹任務，最多 3 次。點「蓋章」記錄你走過的店。';
   } else if (missing.length === COLORS.length) {
@@ -552,7 +555,8 @@ function toggleStamp(id) {
     save();
     render();
     refreshPlanIfOpen();
-    toast(`已取消 ${String(id).padStart(2, '0')} ${shop.name} 的章`);
+    refreshMapIfOpen();
+    toast(`已取消 ${String(id).padStart(2, '0')} ${shop.name} 的紀錄`);
     return;
   }
 
@@ -560,14 +564,15 @@ function toggleStamp(id) {
   save();
   render(id);
   refreshPlanIfOpen();
+  refreshMapIfOpen();
 
   const after = stats();
   if (after.total === SHOPS.length) {
-    toast('🎊 70 家全數集滿！可投摸彩箱參加 8/15 直播大獎摸彩');
+    toast('🎊 70 家都走完了！紙本 DM 蓋滿 70 家才能投摸彩箱');
   } else if (after.rounds > before.rounds) {
-    toast(`🌈 完成第 ${after.rounds} 次彩虹任務！可去民樂街夾扭蛋`);
+    toast(`🌈 第 ${after.rounds} 次彩虹湊齊了！紙本蓋滿七色才能去民樂街夾扭蛋`);
   } else {
-    toast(`蓋章成功 ${String(id).padStart(2, '0')} ${shop.name}`);
+    toast(`已記錄 ${String(id).padStart(2, '0')} ${shop.name}`);
   }
 }
 
@@ -585,13 +590,153 @@ function editNote(id) {
   render();
 }
 
+// ── 地圖 ───────────────────────────────────────────────────
+
+/** 經緯度 → 地圖公尺座標（原點在西北角） */
+function toMapXY(p) {
+  return {
+    x: (p.lon - MAP_BOX.minLon) * MAP_BOX.mLon,
+    y: (MAP_BOX.maxLat - p.lat) * MAP_BOX.mLat,
+  };
+}
+
+/** 同一等級的路合併成一條 path，315 條路只產生 3 個節點 */
+function roadPaths() {
+  const d = { 1: '', 2: '', 3: '' };
+  for (const road of MAP_ROADS) {
+    let s = '';
+    for (let i = 0; i < road.p.length; i += 2) {
+      s += `${i ? 'L' : 'M'}${road.p[i]} ${road.p[i + 1]}`;
+    }
+    d[road.r] += s;
+  }
+  return d;
+}
+
+let mapRendered = false;
+
+/**
+ * 同一座標的店家繞成一圈散開（永樂市場一棟樓裡就有 4 家）
+ * 回傳 id → { dx, dy } 的位移表，單位公尺
+ */
+function pinOffsets() {
+  const groups = new Map();
+  for (const shop of SHOPS) {
+    const key = `${shop.lat},${shop.lon}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(shop);
+  }
+  const offsets = new Map();
+  for (const list of groups.values()) {
+    if (list.length === 1) { offsets.set(list[0].id, { dx: 0, dy: 0 }); continue; }
+    const r = 17;
+    list.forEach((shop, i) => {
+      const a = (Math.PI * 2 * i) / list.length - Math.PI / 2;
+      offsets.set(shop.id, { dx: Math.round(Math.cos(a) * r), dy: Math.round(Math.sin(a) * r) });
+    });
+  }
+  return offsets;
+}
+
+function renderMap() {
+  const host = document.getElementById('map');
+  if (!host) return;
+  const offsets = pinOffsets();
+
+  const d = roadPaths();
+  const parts = [];
+
+  parts.push(`<svg viewBox="0 0 ${MAP_BOX.w} ${MAP_BOX.h}" class="map__svg" role="img" aria-label="大稻埕活動店家位置圖">`);
+
+  // 街道由細到粗疊上去
+  parts.push(`<path class="road road--3" d="${d[3]}"/>`);
+  parts.push(`<path class="road road--2" d="${d[2]}"/>`);
+  parts.push(`<path class="road road--1" d="${d[1]}"/>`);
+
+  // 街道名稱
+  // 直排街名用逐字 tspan：SVG 的 writing-mode 在多數瀏覽器不會正確斷行
+  const LH = 23;
+  for (const l of MAP_LABELS) {
+    if (!l.v) {
+      parts.push(`<text class="map__road-name" x="${l.x}" y="${l.y}">${l.t}</text>`);
+      continue;
+    }
+    const chars = [...l.t];
+    const top = l.y - ((chars.length - 1) * LH) / 2;
+    const spans = chars
+      .map((ch, i) => `<tspan x="${l.x}" dy="${i ? LH : 0}">${ch}</tspan>`)
+      .join('');
+    parts.push(`<text class="map__road-name" x="${l.x}" y="${Math.round(top)}">${spans}</text>`);
+  }
+
+  // 規劃出的路線：先畫線再畫點，避免蓋住店家
+  if (currentPlan && geo) {
+    const pts = [toMapXY(geo), ...currentPlan.stops.map((s2) => {
+      const base = toMapXY(s2);
+      const o = offsets.get(s2.id) || { dx: 0, dy: 0 };
+      return { x: base.x + o.dx, y: base.y + o.dy };
+    })];
+    const path = pts.map((p, i) => `${i ? 'L' : 'M'}${Math.round(p.x)} ${Math.round(p.y)}`).join('');
+    parts.push(`<path class="map__route" d="${path}"/>`);
+  }
+
+  // 店家
+  const planIds = currentPlan ? currentPlan.stops.map((s) => s.id) : [];
+  for (const shop of SHOPS) {
+    const base = toMapXY(shop);
+    const off = offsets.get(shop.id) || { dx: 0, dy: 0 };
+    const x = base.x + off.dx;
+    const y = base.y + off.dy;
+    const done = state.collected.has(shop.id);
+    const hex = COLOR_MAP[shop.color].hex;
+    const step = planIds.indexOf(shop.id);
+    parts.push(
+      `<g class="pin${done ? ' is-done' : ''}${step >= 0 ? ' is-stop' : ''}" data-id="${shop.id}" tabindex="0" role="button" aria-label="${shop.name}，${shop.addr}${done ? '，已集章' : ''}">`
+      + `<circle class="pin__hit" cx="${Math.round(x)}" cy="${Math.round(y)}" r="26"/>`
+      + `<circle class="pin__dot" cx="${Math.round(x)}" cy="${Math.round(y)}" r="13" fill="${hex}"/>`
+      + (done ? `<circle class="pin__done" cx="${Math.round(x)}" cy="${Math.round(y)}" r="5"/>` : '')
+      + (step >= 0 ? `<text class="pin__step" x="${Math.round(x)}" y="${Math.round(y) - 22}">${step + 1}</text>` : '')
+      + '</g>',
+    );
+  }
+
+  // 我的位置
+  if (geo) {
+    const { x, y } = toMapXY(geo);
+    if (x > -100 && x < MAP_BOX.w + 100 && y > -100 && y < MAP_BOX.h + 100) {
+      parts.push(`<g class="me"><circle class="me__halo" cx="${Math.round(x)}" cy="${Math.round(y)}" r="34"/>`
+        + `<circle class="me__dot" cx="${Math.round(x)}" cy="${Math.round(y)}" r="11"/></g>`);
+    }
+  }
+
+  parts.push('</svg>');
+  host.innerHTML = parts.join('');
+
+  // 圖例只需要建一次
+  const legend = document.getElementById('mapLegend');
+  if (!legend.childElementCount) {
+    legend.innerHTML = COLORS.map((c) => `<span class="lg"><i style="background:${c.hex}"></i>${c.label}</span>`).join('')
+      + '<span class="lg"><i class="lg__done"></i>已集章</span>'
+      + '<span class="lg"><i class="lg__me"></i>我的位置</span>';
+  }
+  mapRendered = true;
+}
+
+/** 地圖是展開狀態才重畫，收合時不浪費效能 */
+function refreshMapIfOpen() {
+  if (document.getElementById('mapDetails').open) renderMap();
+}
+
 // ── 路線面板 ───────────────────────────────────────────────
 
 function closePlan() {
   document.getElementById('routePanel').hidden = true;
+  currentPlan = null;
+  refreshMapIfOpen();
 }
 
 function renderPlan(plan, { scroll = true } = {}) {
+  currentPlan = plan;
   const panel = document.getElementById('routePanel');
   const list = document.getElementById('planList');
 
@@ -652,6 +797,7 @@ function renderPlan(plan, { scroll = true } = {}) {
   document.getElementById('planNote').textContent = notes.join('；');
 
   panel.hidden = false;
+  refreshMapIfOpen();
   if (scroll) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -676,6 +822,7 @@ async function handlePlanClick() {
     document.getElementById('nearOption').disabled = false;
     const plan = planRoute(geo);
     render();
+    refreshMapIfOpen();
     if (plan) renderPlan(plan);
     else toast('70 家都集滿了，沒有下一段路要走');
   } catch (err) {
@@ -876,6 +1023,7 @@ function importBackup(file) {
       save();
       render();
       refreshPlanIfOpen();
+      refreshMapIfOpen();
       toast(`已還原 ${state.collected.size} 家的集章紀錄`);
     } catch (err) {
       toast('備份檔讀取失敗，請確認是本站匯出的 JSON');
@@ -984,6 +1132,23 @@ function bindEvents() {
     if (btn.dataset.action === 'note') editNote(id);
   });
 
+  const mapDetails = document.getElementById('mapDetails');
+  mapDetails.addEventListener('toggle', () => {
+    if (mapDetails.open && !mapRendered) renderMap();
+  });
+  const mapHost = document.getElementById('map');
+  mapHost.addEventListener('click', (e) => {
+    const pin = e.target.closest('.pin');
+    if (pin) focusShop(Number(pin.dataset.id));
+  });
+  mapHost.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const pin = e.target.closest('.pin');
+    if (!pin) return;
+    e.preventDefault();
+    focusShop(Number(pin.dataset.id));
+  });
+
   document.getElementById('nextStopBtn').addEventListener('click', handlePlanClick);
   document.getElementById('planRefresh').addEventListener('click', handlePlanClick);
   document.getElementById('planClose').addEventListener('click', closePlan);
@@ -1027,6 +1192,7 @@ function bindEvents() {
     save();
     render();
     refreshPlanIfOpen();
+    refreshMapIfOpen();
     toast('已清除所有紀錄');
   });
 }

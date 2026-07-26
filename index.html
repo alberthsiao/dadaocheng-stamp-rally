@@ -74,6 +74,14 @@
     </div>
   </div>
 
+  <p class="notice">
+    <span class="notice__icon" aria-hidden="true">!</span>
+    <span>
+      <strong>站內蓋章不能換扭蛋</strong>，這裡只是你自己的行程紀錄。
+      要換扭蛋或參加摸彩，須到店<strong>消費</strong>後請店家把印章蓋在<strong>紙本 DM</strong> 上相同編號的格子裡，編號不符視為無效。
+    </span>
+  </p>
+
   <div class="bar" role="img" aria-label="總集章進度" id="totalBarWrap">
     <div class="bar__fill" id="totalBar"></div>
   </div>
@@ -81,6 +89,21 @@
   <p class="progress__hint" id="nextHint">七色各集 1 家＝完成 1 次彩虹任務，最多 3 次。</p>
 
   <ul class="rainbow" id="rainbow"></ul>
+</section>
+
+<!-- ── 地圖 ───────────────────────────────────────────── -->
+<section class="panel mapwrap">
+  <details class="details" id="mapDetails">
+    <summary class="details__summary">
+      <span>地圖・70 家店位置</span>
+      <span class="details__arrow" aria-hidden="true">▾</span>
+    </summary>
+    <div class="details__body">
+      <div class="map" id="map"></div>
+      <div class="map__legend" id="mapLegend"></div>
+      <p class="map__credit">街道圖資 © OpenStreetMap 貢獻者（ODbL）・離線可用</p>
+    </div>
+  </details>
 </section>
 
 <!-- ── 工具列 ─────────────────────────────────────────── -->
@@ -193,6 +216,7 @@
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="data.js"></script>
+<script src="mapdata.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
